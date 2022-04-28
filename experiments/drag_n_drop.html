@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magic Hand</title>
+
+<script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/handsfree@8.5.1/build/lib/assets/handsfree.css" />
+<style>
+body {
+  margin: 0px;
+  font-family: sans-serif;
+  background: #333;
+}
+
+.wand {
+  height: 0px;
+  width: 0px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  z-index: 10;
+}
+
+.wand::after {
+  content: '';
+  display: block;
+  height: 50px;
+  width: 50px;
+  border-radius: 50%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  transition: all 0.2s;
+  box-shadow:
+    inset 0 0 4px 2px white,
+    inset 0 0 4px #0098db,
+    0 0 8px #fff,
+    -4px 0 10px #f0fd,
+    4px 0 10px #0ffd
+  ;
+  animation: rotate-cursor 5s infinite linear;
+}
+
+.handsfree-pointer-palm {
+  display: none !important;
+}
+
+@keyframes rotate-cursor {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 4px 2px white,
+      inset 0 0 4px #0098db,
+      0 0 8px #fff,
+      -4px 0 20px #f0fd,
+      4px 0 15px #0ffd
+    ;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.photo {
+  width: 300px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fff;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: all 0.3s;
+  box-shadow: 0px 2px 10px 0px #000e;
+}
+.element_dragging {
+  box-shadow: 0px 10px 20px 5px #000c;
+  transform: scale(1.2);
+}
+.photo img {
+  width: 100%;
+  display: block;
+}
+.photo_a {
+  width: 400px;
+  left: 20vw;
+  top: 24vh;
+}
+.photo_b {
+  left: 60vw;
+  top: 20vh;
+}
+</style>
+</head>
+<body>
+
+
+<div class="photo photo_a">
+  <img src="https://ftw.usatoday.com/wp-content/uploads/sites/90/2022/03/elden-ring-comet-azur-location-ftw-glhf-1.jpg" alt="comet azur spell">
+</div>
+
+<div class="photo photo_b">
+  <img src="https://assets2.rockpapershotgun.com/malenia-head-elden-ring.jpg/BROK/thumbnail/1200x1200/quality/100/malenia-head-elden-ring.jpg" alt="malenia">
+</div>
+
+<div class="wand"></div>
+
+<script>
+/*
+fun applications:
+- star wars force
+- potter magic
+- iron man ui
+- matrix telekinesis
+*/
+const isDebugMode = false;
+
+const state = {
+  pointerCoords: { x: 0, y: 0 },
+  pinchedElement: null,
+  lastGrabbedElement: null,
+  isDragging: false,
+  timeoutWhenAboutToDrop: null,
+  isCooldownInProgress: false,
+};
+
+const wand = document.querySelector('.wand');
+const canvas = document.getElementById('canvas');
+const photos = document.querySelectorAll('.photo');
+
+const handParts = {
+  wrist: 0,
+  thumb: { base: 1, middle: 2, topKnuckle: 3, tip: 4 },
+  indexFinger: { base: 5, middle: 6, topKnuckle: 7, tip: 8 },
+  middleFinger: { base: 9, middle: 10, topKnuckle: 11, tip: 12 },
+  ringFinger: { base: 13, middle: 14, topKnuckle: 15, tip: 16 },
+  pinky: { base: 17, middle: 18, topKnuckle: 19, tip: 20 },
+  palmCenter: 21,
+};
+
+const whichHand = { left: 0, right: 1 };
+const whichFinger = { index: 0, middle: 1, ring: 2, pinky: 3 };
+
+const flipCoordinate = (coordinate) => {
+  return -coordinate + 1;
+};
+
+const getMirroredCoords = ({ x, y }) => {
+  return { x: flipCoordinate(x), y };
+};
+
+const getElementCoords = (element) => {
+  const rect = element.getBoundingClientRect();
+  const elementTop = rect.top / window.innerHeight;
+  const elementBottom = rect.bottom / window.innerHeight;
+  const elementLeft = rect.left / window.innerWidth;
+  const elementRight = rect.right / window.innerWidth;
+  return { elementTop, elementBottom, elementLeft, elementRight };
+};
+
+const isElementPinched = ({ pinchX, pinchY, elementTop, elementBottom, elementLeft, elementRight }) => {
+  const isPinchInXRange = elementLeft <= pinchX && pinchX <= elementRight;
+  const isPinchInYRange = elementTop <= pinchY && pinchY <= elementBottom;
+  return isPinchInXRange && isPinchInYRange;
+};
+
+const getPinchedElement = ({ pinchX, pinchY, elements }) => {
+  let pinchedElement;
+  for (const element of elements) {
+    const elementCoords = getElementCoords(element);
+    if (isElementPinched({ pinchX, pinchY, ...elementCoords })) {
+      pinchedElement = {
+        domNode: element,
+        coords: {
+          x: elementCoords.elementLeft,
+          y: elementCoords.elementTop,
+        },
+        offsetFromCorner: {
+          x: pinchX - elementCoords.elementLeft,
+          y: pinchY - elementCoords.elementTop,
+        },
+      };
+      const isTopElement = element === state.lastGrabbedElement;
+      if (isTopElement) {
+        return pinchedElement;
+      }
+    }
+  }
+  return pinchedElement;
+};
+
+const handsfree = new Handsfree({
+  hands: {
+    enabled: true,
+    maxNumHands: 1,
+  }
+});
+handsfree.enablePlugins('browser');
+handsfree.start();
+handsfree.plugin.palmPointers.disable();
+
+const tweenTo = ({x, y}) => {
+  const time = 1;
+  handsfree.TweenMax.to(state.pointerCoords, time, {
+    x,
+    y,
+    overwrite: true,
+    ease: 'linear.easeNone',
+    immediate: true
+  })
+};
+
+const convertCoordsToDomPosition = ({ x, y }) => {
+  return {
+    x: `${x * 100}vw`,
+    y: `${y * 100}vh`,
+  }
+};
+
+const onHandDataArrival = (event) => {
+  const data = event.detail;
+  if (data.hands.landmarksVisible[whichHand.right]) {
+    const indexFingerTip = data.hands.landmarks[whichHand.right][handParts.indexFinger.tip];
+    tweenTo(indexFingerTip);
+    const mirroredCoords = getMirroredCoords(state.pointerCoords);
+    const { x, y } = convertCoordsToDomPosition(mirroredCoords);
+    wand.style.transform = `translate(${x}, ${y})`;
+  }
+}
+
+
+document.addEventListener('handsfree-data', onHandDataArrival);
+
+const preventRedragTooSoon = () => {
+  setTimeout(() => {
+    state.isCooldownInProgress = false;
+  }, 500);
+};
+
+const pickUp = (element) => {
+  state.lastGrabbedElement?.style.removeProperty('z-index');
+  state.lastGrabbedElement = element;
+  element.style.zIndex = 1;
+  element.classList.add('element_dragging');
+};
+const drop = (element) => {
+  state.isDragging = false;
+  state.pinchedElement = undefined;
+  element.classList.remove('element_dragging');
+};
+
+const isRealPinch = () => {
+  const indexFingerZCoord = handsfree.data.hands.landmarks[whichHand.right][handParts.indexFinger.tip].z;
+  const thumbZCoord = handsfree.data.hands.landmarks[whichHand.right][handParts.thumb.tip].z;
+  const zDistance = Math.abs(indexFingerZCoord - thumbZCoord);
+  return zDistance < 0.1;
+};
+
+const startPinch = () => {
+  if (!isRealPinch()) { return; }
+
+  clearTimeout(state.timeoutWhenAboutToDrop);
+  if (state.isDragging || state.isCooldownInProgress) { return; }
+
+  const pinchStartPoint = getMirroredCoords(handsfree.data.hands.origPinch[whichHand.right][whichFinger.index]);
+  state.pinchedElement = getPinchedElement({
+    pinchX: pinchStartPoint.x,
+    pinchY: pinchStartPoint.y,
+    elements: photos,
+  });
+  if (state.pinchedElement) {
+    state.isDragging = true;
+    state.isCooldownInProgress = true;
+    pickUp(state.pinchedElement.domNode);
+  }
+};
+
+const dragPinch = () => {
+  if (!state.isDragging) { return; };
+  const pinchCurrentPoint = getMirroredCoords(handsfree.data.hands.curPinch[whichHand.right][whichFinger.index]);
+
+  if (state.pinchedElement) {
+    state.pinchedElement.coords = {
+      x: pinchCurrentPoint.x - state.pinchedElement.offsetFromCorner.x,
+      y: pinchCurrentPoint.y - state.pinchedElement.offsetFromCorner.y,
+    };
+
+    const { x, y } = convertCoordsToDomPosition(state.pinchedElement.coords);
+    state.pinchedElement.domNode.style.left = x;
+    state.pinchedElement.domNode.style.top = y;
+  }
+};
+
+const stopPinch = () => {
+  if (state.pinchedElement) {
+    state.timeoutWhenAboutToDrop = setTimeout(() => {
+      drop(state.pinchedElement.domNode);
+      preventRedragTooSoon();
+    }, 50);
+  }
+};
+
+
+
+handsfree.on(`finger-pinched-start-${whichHand.right}-${whichFinger.index}`, startPinch);
+handsfree.on(`finger-pinched-held-${whichHand.right}-${whichFinger.index}`, dragPinch);
+handsfree.on(`finger-pinched-released-${whichHand.right}-${whichFinger.index}`, stopPinch);
+
+
+const startDebug = () => {
+  document.head.innerHTML += `
+    <style>
+      .handsfree-canvas {
+        width: 300px !important;
+        position: fixed;
+        transform: none;
+        left: 0;
+        bottom: 0;
+      }
+
+      body.handsfree-finger-pinched-1-0 {
+        background: gold;
+      }
+    </style>
+  `;
+  handsfree.showDebugger();
+};
+if (isDebugMode) {
+  startDebug();
+}
+</script>
+</body>
+</html>

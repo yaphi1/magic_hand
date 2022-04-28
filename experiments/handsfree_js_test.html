@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tensorflow test</title>
+
+<script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/handsfree@8.5.1/build/lib/assets/handsfree.css" />
+<style>
+body {
+  margin: 0px;
+  font-family: sans-serif;
+}
+
+.blue_dot {
+  height: 0px;
+  width: 0px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  /* transition: transform 0.3s; */
+}
+
+.blue_dot::after {
+  content: '';
+  display: block;
+  height: 50px;
+  width: 50px;
+  border-radius: 50%;
+  background: #0098db;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+}
+
+.handsfree-pointer-palm {
+  display: none !important;
+}
+
+/* debug mode only */
+.handsfree-canvas {
+  width: 300px !important;
+  position: fixed;
+  transform: none;
+  left: 0;
+  bottom: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="blue_dot"></div>
+
+<script>
+
+const blue_dot = document.querySelector('.blue_dot');
+
+const canvas = document.getElementById('canvas');
+
+const handParts = {
+  wrist: 0,
+  thumb: { base: 1, middle: 2, topKnuckle: 3, tip: 4 },
+  indexFinger: { base: 5, middle: 6, topKnuckle: 7, tip: 8 },
+  middleFinger: { base: 9, middle: 10, topKnuckle: 11, tip: 12 },
+  ringFinger: { base: 13, middle: 14, topKnuckle: 15, tip: 16 },
+  pinky: { base: 17, middle: 18, topKnuckle: 19, tip: 20 },
+  palmCenter: 21,
+};
+
+const whichHand = { left: 0, right: 1 };
+
+const flipCoordinate = (coordinate) => {
+  return -coordinate + 1;
+};
+
+const handsfree = new Handsfree({hands: true});
+handsfree.enablePlugins('browser');
+handsfree.start();
+
+handsfree.plugin.palmPointers.hidePointers();
+
+const pointerCoords = { x: 0, y: 0 };
+
+const tweenTo = ({x, y}) => {
+  const time = 1;
+  handsfree.TweenMax.to(pointerCoords, time, {
+    x,
+    y,
+    overwrite: true,
+    ease: 'linear.easeNone',
+    immediate: true
+  })
+};
+
+const onData = (event) => {
+  const data = event.detail;
+  if (data.hands.landmarksVisible[whichHand.right]) {
+    const indexFingerTip = data.hands.landmarks[whichHand.right][handParts.indexFinger.tip];
+
+    // non-tween
+    // blue_dot.style.transform = `translate(${flipCoordinate(indexFingerTip.x) * 100}vw, ${indexFingerTip.y * 100}vh)`;
+
+    // tween
+    tweenTo(indexFingerTip);
+    blue_dot.style.transform = `translate(${flipCoordinate(pointerCoords.x) * 100}vw, ${pointerCoords.y * 100}vh)`;
+  }
+}
+
+// handsfree.showDebugger();
+
+document.addEventListener('handsfree-data', onData);
+
+// setTimeout( () => {
+//   document.removeEventListener('handsfree-data', onData);
+// }, 20000);
+
+</script>
+</body>
+</html>

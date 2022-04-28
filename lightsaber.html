@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightsaber</title>
+
+<link rel="stylesheet" href="./magic_hand.css">
+<style>
+.lightsaber {
+  --blade-color: #0ff;
+  --handle-length: 350px;
+  --blade-length: 600px;
+
+  height: 0px;
+  width: 0px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  z-index: 10;
+  transition: transform 0.1s;
+  transform: translate(-300px, 200px);
+
+  --color-shift:
+    inset 0 0 4px 2px white,
+    inset 0 0 4px #0098db,
+    0 0 8px #fff,
+    -4px 0 10px #f0fd,
+    4px 0 10px #0ffd
+  ;
+  --color-shift--animated:
+    inset 0 0 4px 2px white,
+    inset 0 0 4px #0098db,
+    0 0 8px #fff,
+    -4px 0 20px #0ffd,
+    4px 0 20px #f0fd
+  ;
+
+  --solid-color:
+    inset 0 0 4px var(--blade-color),
+    -4px 0 10px var(--blade-color);
+  --solid-color--animated:
+    inset 0 0 4px var(--blade-color),
+    -4px 0 20px var(--blade-color);
+}
+
+/* blade */
+.lightsaber::before {
+  content: '';
+  display: block;
+  transform-origin: center right;
+  transform: translate(0%, -50%) scaleX(0);
+  transition: transform 0.3s;
+  height: 20px;
+  width: var(--blade-length);
+  position: absolute;
+  right: calc(var(--handle-length) / 2 - 40px);
+  top: 0;
+  background: #fff;
+  border-radius: 10px;
+  /* box-shadow: var(--color-shift); */
+  box-shadow: var(--solid-color);
+}
+.lightsaber.expanded::before {
+  transform: translate(0%, -50%) scaleX(1);
+  animation: animate-blade 5s infinite linear;
+}
+
+@keyframes animate-blade {
+  50% {
+    /* box-shadow: var(--color-shift--animated); */
+    box-shadow: var(--solid-color--animated);
+  }
+}
+
+/* hilt */
+.lightsaber::after {
+  content: '';
+  display: block;
+  height: 80px;
+  width: var(--handle-length);
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  transition: all 0.2s;
+  /* border: 1px dashed #ddd; */
+  background-image: url('./img/lightsaber_hilt.png'); /* image credit: pngkey.com (free to download) */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+<div class="debug_window">
+  <video class="input_video"></video>
+  <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+</div>
+
+<div class="cursor lightsaber"></div>
+
+<script src="./magic_hand.js"></script>
+<script>
+const lightsaber = document.querySelector('.lightsaber');
+document.addEventListener('pinch_start', () => {
+  lightsaber.classList.toggle('expanded');
+});
+</script>
+</body>
+</html>

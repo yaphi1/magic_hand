@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dice</title>
+
+<link rel="stylesheet" href="./magic_hand.css">
+<style>
+.dice {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 150px;
+  width: 150px;
+  transition: all 0.2s;
+  border-radius: 20px;
+  border: 2px solid #ddd;
+  position: absolute;
+  left: 20vw;
+  top: 24vh;
+  background: #555;
+  box-shadow: 0px 2px 10px 0px #000e;
+}
+.dice.element_dragging {
+  box-shadow: 0px 10px 20px 5px #000c;
+  transform: scale(1.2);
+}
+.number {
+  color: #fff;
+  font-size: 60px;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+<div class="debug_window">
+  <video class="input_video"></video>
+  <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+</div>
+
+<div class="movable dice">
+  <div class="number">
+    3
+  </div>
+</div>
+
+<div class="cursor wand"></div>
+
+<script src="./magic_hand.js"></script>
+<script>
+const random = (min, max) => {
+  return Math.floor(Math.random() * (max + 1 - min) + min);
+};
+const dice = document.querySelector('.dice');
+const number = document.querySelector('.number');
+let rollInterval = null;
+const diceMax = 20;
+
+document.addEventListener('pinch_pick_up', () => {
+  let shuffleProgress = 0;
+  const colors = ['#505', '#055', '#099'];
+  rollInterval = setInterval(() => {
+    dice.style.background = colors[shuffleProgress % colors.length];
+    number.innerHTML = random(1, diceMax);
+    shuffleProgress++;
+  }, 100);
+});
+document.addEventListener('pinch_drop', () => {
+  clearInterval(rollInterval);
+  number.innerHTML = random(1, diceMax);
+});
+</script>
+</body>
+</html>

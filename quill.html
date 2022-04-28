@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quill</title>
+
+<link rel="stylesheet" href="./magic_hand.css">
+<style>
+.quill {
+  height: 0px;
+  width: 0px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  z-index: 10;
+  transition: transform 0.1s;
+  transform: translate(-400px, 300px);
+  /* border: 1px dashed orange; */
+}
+
+.quill::after {
+  content: '';
+  display: block;
+  height: 168px;
+  width: 340px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(0%, -100%);
+  transition: all 0.2s;
+  /* border: 1px dashed #ddd; */
+  background-image: url('https://www.pikpng.com/pngl/b/105-1050298_quill-png-clipart.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+body {
+  background-image: url('https://i2.wp.com/nametagwizard.com/blog/wp-content/uploads/sites/4/2015/03/the_wizards_room_by_pranile-d52cfsf.jpg?ssl=1');
+  background-size: cover;
+}
+
+.drawing_canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* border: 1px dashed #fff; */
+}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+<div class="debug_window">
+  <video class="input_video"></video>
+  <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+</div>
+
+<canvas class="drawing_canvas"></canvas>
+
+<div class="cursor quill"></div>
+
+<script src="./magic_hand.js"></script>
+<script>
+const drawingCanvas = document.querySelector('.drawing_canvas');
+const drawingContext = drawingCanvas.getContext('2d');
+const quill = document.querySelector('.quill');
+
+function resizeCanvas() {
+  drawingCanvas.width = window.innerWidth;
+  drawingCanvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function drawCircle({ x, y, radius, color }) {
+  drawingContext.fillStyle = color;
+  drawingContext.beginPath();
+  const startAngle = 0;
+  const endAngle = 2 * Math.PI;
+  drawingContext.arc(x, y, radius, startAngle, endAngle);
+  drawingContext.fill();
+}
+
+function drawLine({ xStart, yStart, xEnd, yEnd, thickness, color }) {
+  drawingContext.lineWidth = thickness;
+  drawingContext.strokeStyle = color;
+  drawingContext.beginPath();
+  drawingContext.moveTo(xStart, yStart);
+  drawingContext.lineTo(xEnd, yEnd);
+  drawingContext.stroke();
+}
+
+function random(min, max) {
+  return Math.floor(Math.random() * (max + 1 - min) + min);
+};
+
+function markWithRegularPen({ x, y }) {
+  const markThickness = 10;
+  const markColor = '#fff';
+  drawCircle({
+    ...state.markCoords,
+    radius: markThickness / 2,
+    color: markColor,
+  });
+  if (state.previousMarkCoords) {
+    drawLine({
+      xStart: state.markCoords.x,
+      yStart: state.markCoords.y,
+      xEnd: state.previousMarkCoords.x,
+      yEnd: state.previousMarkCoords.y,
+      thickness: markThickness,
+      color: markColor,
+    });
+  }
+}
+
+function markWithSplatterPen({ x, y }) {
+  const markThickness = 10;
+  const markColors = ['#fffa', '#fafa', '#affa'];
+
+  const min = -20;
+  const max = 20;
+
+  for (let i=0; i<4; i++) {
+    const randomOffset = {
+      x: random(min, max),
+      y: random(min, max),
+    };
+    drawCircle({
+      x: state.markCoords.x + randomOffset.x,
+      y: state.markCoords.y + randomOffset.y,
+      radius: random(2, 8),
+      color: markColors[random(0, markColors.length - 1)],
+    });
+  }
+}
+
+function draw({ x, y, penType }) {
+  const drawWithPen = {
+    regular: markWithRegularPen,
+    splatter: markWithSplatterPen,
+  }
+  state.markCoords = {
+    x: x * drawingCanvas.width,
+    y: y * drawingCanvas.height,
+  };
+  drawWithPen[penType]({ x, y });
+  state.previousMarkCoords = { ...state.markCoords };
+}
+
+function stopDrawing() {
+  state.previousMarkCoords = null;
+}
+
+document.addEventListener('pinch_move', (e) => {
+  console.log(e.detail);
+  const { x, y } = e.detail;
+  draw({ x, y, penType: 'splatter' });
+});
+document.addEventListener('pinch_stop', (e) => {
+  stopDrawing();
+});
+</script>
+</body>
+</html>

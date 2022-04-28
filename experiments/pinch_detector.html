@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<style>
+.input_video {
+  display: none;
+}
+.output_canvas {
+  width: 400px;
+}
+</style>
+</head>
+
+<body>
+<div class="debug_window">
+  <video class="input_video"></video>
+  <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+</div>
+
+<script>
+const videoElement = document.querySelector('.input_video');
+const canvasElement = document.querySelector('.output_canvas');
+const canvasCtx = canvasElement.getContext('2d');
+
+const handParts = {
+  wrist: 0,
+  thumb: { base: 1, middle: 2, topKnuckle: 3, tip: 4 },
+  indexFinger: { base: 5, middle: 6, topKnuckle: 7, tip: 8 },
+  middleFinger: { base: 9, middle: 10, topKnuckle: 11, tip: 12 },
+  ringFinger: { base: 13, middle: 14, topKnuckle: 15, tip: 16 },
+  pinky: { base: 17, middle: 18, topKnuckle: 19, tip: 20 },
+};
+
+function getCurrentHand(handData) {
+  const mirroredHand = handData.multiHandedness[0].label === 'Left' ? 'right' : 'left';
+  return mirroredHand;
+}
+
+function isPinched({ handData, whichHand, whichFinger }) {
+  const fingerTip = handData.multiHandLandmarks[0][handParts[whichFinger].tip];
+  const thumbTip = handData.multiHandLandmarks[0][handParts.thumb.tip];
+  const distance = {
+    x: Math.abs(fingerTip.x - thumbTip.x),
+    y: Math.abs(fingerTip.y - thumbTip.y),
+    z: Math.abs(fingerTip.z - thumbTip.z),
+  };
+  console.log(distance);
+  const areFingersCloseEnough = distance.x < 0.08 && distance.y < 0.08 && distance.z < 0.08;
+  const isCorrectHand = whichHand === getCurrentHand(handData);
+  return isCorrectHand && areFingersCloseEnough;
+}
+
+function onResults(handData) {
+  if (handData.multiHandLandmarks[0]) {
+    console.log(isPinched({ handData, whichHand: 'right', whichFinger: 'indexFinger' }));
+  }
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  canvasCtx.drawImage(
+      handData.image, 0, 0, canvasElement.width, canvasElement.height);
+  if (handData.multiHandLandmarks) {
+    for (const landmarks of handData.multiHandLandmarks) {
+      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                     {color: '#00FF00', lineWidth: 5});
+      drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+    }
+  }
+  canvasCtx.restore();
+}
+
+const hands = new Hands({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+}});
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: 0,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+hands.onResults(onResults);
+
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await hands.send({image: videoElement});
+  },
+  width: 1280,
+  height: 720
+});
+camera.start();
+</script>
+</body>
+</html>
