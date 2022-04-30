@@ -7,22 +7,22 @@
 
 <link rel="stylesheet" href="./magic_hand.css">
 <style>
+.dice_container {
+  transform: translate(20vw, 24vh);
+}
 .dice {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 150px;
   width: 150px;
-  transition: all 0.2s;
+  transition: transform 0.2s;
   border-radius: 20px;
   border: 2px solid #ddd;
-  position: absolute;
-  left: 20vw;
-  top: 24vh;
   background: #555;
   box-shadow: 0px 2px 10px 0px #000e;
 }
-.dice.element_dragging {
+.element_dragging .dice {
   box-shadow: 0px 10px 20px 5px #000c;
   transform: scale(1.2);
 }
@@ -43,9 +43,11 @@
   <canvas class="output_canvas" width="1280px" height="720px"></canvas>
 </div>
 
-<div class="movable dice">
-  <div class="number">
-    3
+<div class="movable dice_container">
+  <div class="dice">
+    <div class="number">
+      3
+    </div>
   </div>
 </div>
 

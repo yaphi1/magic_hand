@@ -7,19 +7,16 @@
 
 <link rel="stylesheet" href="./magic_hand.css">
 <style>
-.photo {
+.photo_frame {
   width: 300px;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 3px;
   background: #fff;
-  position: absolute;
-  left: 0;
-  top: 0;
-  transition: all 0.2s;
+  transition: transform 0.2s;
   box-shadow: 0px 2px 10px 0px #000e;
 }
-.photo.element_dragging {
+.element_dragging .photo_frame {
   box-shadow: 0px 10px 20px 5px #000c;
   transform: scale(1.2);
 }
@@ -28,13 +25,13 @@
   display: block;
 }
 .photo_a {
-  width: 400px;
-  left: 20vw;
-  top: 24vh;
+  transform: translate(20vw, 24vh);
 }
 .photo_b {
-  left: 60vw;
-  top: 20vh;
+  transform: translate(60vw, 20vh);
+}
+.photo_a .photo_frame {
+  width: 400px;
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -50,11 +47,15 @@
 </div>
 
 <div class="movable photo photo_a">
-  <img src="https://ftw.usatoday.com/wp-content/uploads/sites/90/2022/03/elden-ring-comet-azur-location-ftw-glhf-1.jpg" alt="comet azur spell">
+  <div class="photo_frame">
+    <img src="https://ftw.usatoday.com/wp-content/uploads/sites/90/2022/03/elden-ring-comet-azur-location-ftw-glhf-1.jpg" alt="comet azur spell">
+  </div>
 </div>
 
 <div class="movable photo photo_b">
-  <img src="https://assets2.rockpapershotgun.com/malenia-head-elden-ring.jpg/BROK/thumbnail/1200x1200/quality/100/malenia-head-elden-ring.jpg" alt="malenia">
+  <div class="photo_frame">
+    <img src="https://assets2.rockpapershotgun.com/malenia-head-elden-ring.jpg/BROK/thumbnail/1200x1200/quality/100/malenia-head-elden-ring.jpg" alt="malenia">
+  </div>
 </div>
 
 <div class="cursor wand"></div>

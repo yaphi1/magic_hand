@@ -251,8 +251,7 @@ function onPinchMove() {
     };
 
     const { x, y } = convertCoordsToDomPosition(state.pinchedElement.coords);
-    state.pinchedElement.domNode.style.left = x;
-    state.pinchedElement.domNode.style.top = y;
+    state.pinchedElement.domNode.style.transform = `translate(${x}, ${y})`;
   }
 }
 

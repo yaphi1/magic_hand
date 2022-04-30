@@ -7,33 +7,28 @@
 
 <link rel="stylesheet" href="./magic_hand.css">
 <style>
-.furniture {
+.furniture_content {
   width: 200px;
   border: 1px solid #ddd;
   border-radius: 10px;
   background: #fff;
-  position: absolute;
-  left: 0;
-  top: 0;
-  transition: all 0.2s;
+  transition: transform 0.2s;
   box-shadow: 0px 2px 10px 0px #000e;
   overflow: hidden;
 }
-.furniture.element_dragging {
+.element_dragging .furniture_content {
   box-shadow: 0px 10px 20px 5px #000c;
   transform: scale(1.1);
 }
-.furniture img {
+.furniture_content img {
   width: 100%;
   display: block;
 }
 .furniture_a {
-  left: 7vw;
-  top: 24vh;
+  transform: translate(7vw, 24vh);
 }
 .furniture_b {
-  left: 7vw;
-  top: 40vh;
+  transform: translate(7vw, 40vh);
 }
 
 body {
@@ -58,11 +53,15 @@ body {
 </div>
 
 <div class="movable furniture furniture_a">
-  <img src="./img/sofa.png" alt="">
+  <div class="furniture_content">
+    <img src="./img/sofa.png" alt="">
+  </div>
 </div>
 
 <div class="movable furniture furniture_b">
-  <img src="https://i.pinimg.com/736x/81/4d/e8/814de875dcd72f4398fb42965fd11a83.jpg" alt="">
+  <div class="furniture_content">
+    <img src="https://i.pinimg.com/736x/81/4d/e8/814de875dcd72f4398fb42965fd11a83.jpg" alt="">
+  </div>
 </div>
 
 <div class="cursor wand"></div>

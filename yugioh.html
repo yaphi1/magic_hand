@@ -7,19 +7,16 @@
 
 <link rel="stylesheet" href="./magic_hand.css">
 <style>
-.card {
+.card_content {
   width: 200px;
   border: 1px solid #ddd;
   border-radius: 10px;
   background: #fff;
-  position: absolute;
-  left: 0;
-  top: 0;
-  transition: all 0.2s;
+  transition: transform 0.2s;
   box-shadow: 0px 2px 10px 0px #000e;
   overflow: hidden;
 }
-.card.element_dragging {
+.element_dragging .card_content {
   box-shadow: 0px 10px 20px 5px #000c;
   transform: scale(1.2);
 }
@@ -28,16 +25,13 @@
   display: block;
 }
 .card_a {
-  left: 20vw;
-  top: 24vh;
+  transform: translate(20vw, 25vh);
 }
 .card_b {
-  left: 40vw;
-  top: 20vh;
+  transform: translate(40vw, 25vh);
 }
 .card_c {
-  left: 60vw;
-  top: 20vh;
+  transform: translate(60vw, 25vh);
 }
 
 body {
@@ -61,15 +55,21 @@ body {
 </div>
 
 <div class="movable card card_a">
-  <img src="https://cdn1.dotesports.com/wp-content/uploads/2021/04/09132203/Blue-Eyes-alternate.png" alt="">
+  <div class="card_content">
+    <img src="https://cdn1.dotesports.com/wp-content/uploads/2021/04/09132203/Blue-Eyes-alternate.png" alt="">
+  </div>
 </div>
 
 <div class="movable card card_b">
-  <img src="https://images.saymedia-content.com/.image/t_share/MTc0Mzg2MzUzNTMzMjk4MDI0/yu-gi-ohs-top-6-forbidden-monster-cards.jpg" alt="">
+  <div class="card_content">
+    <img src="https://images.saymedia-content.com/.image/t_share/MTc0Mzg2MzUzNTMzMjk4MDI0/yu-gi-ohs-top-6-forbidden-monster-cards.jpg" alt="">
+  </div>
 </div>
 
 <div class="movable card card_c">
-  <img src="https://ms.yugipedia.com//1/12/DarkEndDragon-RYMP-EN-SR-1E.jpg" alt="">
+  <div class="card_content">
+    <img src="https://ms.yugipedia.com//1/12/DarkEndDragon-RYMP-EN-SR-1E.jpg" alt="">
+  </div>
 </div>
 
 <div class="cursor wand"></div>

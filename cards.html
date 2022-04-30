@@ -7,19 +7,16 @@
 
 <link rel="stylesheet" href="./magic_hand.css">
 <style>
-.card {
+.card_content {
   width: 200px;
   border: 1px solid #ddd;
   border-radius: 10px;
   background: #fff;
-  position: absolute;
-  left: 0;
-  top: 0;
-  transition: all 0.2s;
+  transition: transform 0.2s;
   box-shadow: 0px 2px 10px 0px #000e;
   overflow: hidden;
 }
-.card.element_dragging {
+.element_dragging .card_content {
   box-shadow: 0px 10px 20px 5px #000c;
   transform: scale(1.2);
 }
@@ -28,20 +25,16 @@
   display: block;
 }
 .card_a {
-  left: 10vw;
-  top: 25vh;
+  transform: translate(10vw, 25vh);
 }
 .card_b {
-  left: 30vw;
-  top: 25vh;
+  transform: translate(30vw, 25vh);
 }
 .card_c {
-  left: 50vw;
-  top: 25vh;
+  transform: translate(50vw, 25vh);
 }
 .card_d {
-  left: 70vw;
-  top: 25vh;
+  transform: translate(70vw, 25vh);
 }
 
 body {
@@ -61,19 +54,27 @@ body {
 </div>
 
 <div class="movable card card_a">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Cards-A-Spade.svg/1200px-Cards-A-Spade.svg.png" alt="">
+  <div class="card_content">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Cards-A-Spade.svg/1200px-Cards-A-Spade.svg.png" alt="">
+  </div>
 </div>
 
 <div class="movable card card_b">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Cards-A-Heart.svg/800px-Cards-A-Heart.svg.png" alt="">
+  <div class="card_content">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Cards-A-Heart.svg/800px-Cards-A-Heart.svg.png" alt="">
+  </div>
 </div>
 
 <div class="movable card card_c">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Cards-A-Club.svg/1200px-Cards-A-Club.svg.png" alt="">
+  <div class="card_content">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Cards-A-Club.svg/1200px-Cards-A-Club.svg.png" alt="">
+  </div>
 </div>
 
 <div class="movable card card_d">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Cards-A-Diamond.svg/1200px-Cards-A-Diamond.svg.png" alt="">
+  <div class="card_content">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Cards-A-Diamond.svg/1200px-Cards-A-Diamond.svg.png" alt="">
+  </div>
 </div>
 
 <div class="cursor wand"></div>
