@@ -5,8 +5,7 @@ const state = {
   isPinched: false,
   pinchedElement: false,
   pinchDelayMs: 60,
-  pinchStartTimeout: null,
-  pinchStopTimeout: null,
+  pinchChangeTimeout: null,
   cursorPosition: { x: 0, y: 0 },
 };
 
@@ -90,36 +89,6 @@ const drop = (element) => {
   document.dispatchEvent(pinchDrop);
 };
 
-const triggerPinchEvent = {
-  start: function () {
-    if (state.pinchStartTimeout || state.pinchStopTimeout) { return; }
-    state.pinchStartTimeout = setTimeout(() => {
-      if (isPinched()) {
-        state.isPinched = true;
-        document.dispatchEvent(pinchStart);
-      }
-      clearTimeout(state.pinchStartTimeout);
-      state.pinchStartTimeout = null;
-    }, state.pinchDelayMs);
-  },
-
-  move: function () {
-    document.dispatchEvent(pinchMove);
-  },
-
-  stop: function () {
-    if (state.pinchStartTimeout || state.pinchStopTimeout) { return; }
-    state.pinchStopTimeout = setTimeout(() => {
-      if (!isPinched()) {
-        state.isPinched = false;
-        document.dispatchEvent(pinchStop);
-      }
-      clearTimeout(state.pinchStopTimeout);
-      state.pinchStopTimeout = null;
-    }, state.pinchDelayMs);
-  },
-};
-
 function log(...args) {
   if (state.isDebugMode) {
     console.log(...args);
@@ -191,7 +160,7 @@ function isPrimaryHandAvailable() {
   return isHandAvailable() && isPrimaryHand(state.preferredHand);
 }
 
-function onHandDataArrival(handData) {
+function onResults(handData) {
   state.handData = handData;
   if (!state.handData) { return; }
   if (state.isDebugMode) { updateDebugCanvas(); }
@@ -213,14 +182,27 @@ function updateCursor() {
 function updatePinchState() {
   const wasPinchedBefore = state.isPinched;
   const isPinchedNow = isPinched();
+  const hasPinchStateChanged = isPinchedNow !== wasPinchedBefore;
 
-  const isStartingPinch = !wasPinchedBefore && isPinchedNow;
-  const isContinuingPinch = wasPinchedBefore && isPinchedNow;
-  const isStoppingPinch = wasPinchedBefore && !isPinchedNow;
+  if (hasPinchStateChanged && !state.pinchChangeTimeout) {
+    state.pinchChangeTimeout = setTimeout(() => {
+      if (isPinchedNow) {
+        state.isPinched = true;
+        document.dispatchEvent(pinchStart);
+      } else {
+        state.isPinched = false;
+        document.dispatchEvent(pinchStop);
+      }
+    }, state.pinchDelayMs);
+  }
 
-  if (isStartingPinch) { triggerPinchEvent.start(); }
-  if (isContinuingPinch) { triggerPinchEvent.move(); }
-  if (isStoppingPinch) { triggerPinchEvent.stop(); }
+  if (!hasPinchStateChanged) {
+    clearTimeout(state.pinchChangeTimeout);
+    state.pinchChangeTimeout = null;
+    if (isPinchedNow) {
+      document.dispatchEvent(pinchMove);
+    }
+  }
 }
 
 document.addEventListener('pinch_start', onPinchStart);
@@ -271,7 +253,7 @@ hands.setOptions({
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5
 });
-hands.onResults(onHandDataArrival);
+hands.onResults(onResults);
 
 const camera = new Camera(videoElement, {
   onFrame: async () => {

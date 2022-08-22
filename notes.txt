@@ -1,0 +1,10 @@
+
+updatePinchState()
+
+  if pinch state changed (and there's no timer yet)
+  start change-timer
+    if change-timer goes uninterrupted, register new pinch state and fire corresponding event
+
+  if pinch state unchanged
+  cancel change-timer
+  if isPinched, fire move event
