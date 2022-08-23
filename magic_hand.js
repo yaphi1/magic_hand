@@ -182,27 +182,29 @@ function updateCursor() {
 function updatePinchState() {
   const wasPinchedBefore = state.isPinched;
   const isPinchedNow = isPinched();
-  const hasPinchStateChanged = isPinchedNow !== wasPinchedBefore;
+  const hasPassedPinchThreshold = isPinchedNow !== wasPinchedBefore;
+  const hasWaitStarted = !!state.pinchChangeTimeout;
 
-  if (hasPinchStateChanged && !state.pinchChangeTimeout) {
-    state.pinchChangeTimeout = setTimeout(() => {
-      if (isPinchedNow) {
-        state.isPinched = true;
-        document.dispatchEvent(pinchStart);
-      } else {
-        state.isPinched = false;
-        document.dispatchEvent(pinchStop);
-      }
-    }, state.pinchDelayMs);
+  if (hasPassedPinchThreshold && !hasWaitStarted) {
+    registerChangeAfterWait(isPinchedNow);
   }
 
-  if (!hasPinchStateChanged) {
-    clearTimeout(state.pinchChangeTimeout);
-    state.pinchChangeTimeout = null;
-    if (isPinchedNow) {
-      document.dispatchEvent(pinchMove);
-    }
+  if (!hasPassedPinchThreshold) {
+    cancelWaitForChange();
+    if (isPinchedNow) { document.dispatchEvent(pinchMove); }
   }
+}
+
+function registerChangeAfterWait(isPinchedNow) {
+  state.pinchChangeTimeout = setTimeout(() => {
+    state.isPinched = isPinchedNow;
+    document.dispatchEvent(isPinchedNow ? pinchStart : pinchStop);
+  }, state.pinchDelayMs);
+}
+
+function cancelWaitForChange() {
+  clearTimeout(state.pinchChangeTimeout);
+  state.pinchChangeTimeout = null;
 }
 
 document.addEventListener('pinch_start', onPinchStart);
