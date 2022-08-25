@@ -1,20 +1,28 @@
-const state = {
-  isDebugMode: false,
-  preferredHand: 'right', // change to 'left' if you want
-  handData: null,
-  isPinched: false,
-  pinchedElement: false,
-  pinchDelayMs: 60,
-  pinchChangeTimeout: null,
-  cursorPosition: { x: 0, y: 0 },
+const OPTIONS = {
+  IS_DEBUG_MODE: false,
+  PREFERRED_HAND: 'right', /* change to 'left' if you want */
+  PINCH_DELAY_MS: 60,
 };
 
-const pinchStart = new CustomEvent('pinch_start', { detail: state.cursorPosition });
-const pinchMove = new CustomEvent('pinch_move', { detail: state.cursorPosition });
-const pinchStop = new CustomEvent('pinch_stop', { detail: state.cursorPosition });
+const state = {
+  isPinched: false,
+  pinchChangeTimeout: null,
+  grabbedElement: null,
+  lastGrabbedElement: null,
+};
 
-const pinchPickUp = new CustomEvent('pinch_pick_up', { detail: state.cursorPosition });
-const pinchDrop = new CustomEvent('pinch_drop', { detail: state.cursorPosition });
+const PINCH_EVENTS = {
+  START: 'pinch_start',
+  MOVE: 'pinch_move',
+  STOP: 'pinch_stop',
+  PICK_UP: 'pinch_pick_up',
+  DROP: 'pinch_drop',
+};
+
+function triggerEvent(eventName, detail) {
+  const event = new CustomEvent(eventName, { detail });
+  document.dispatchEvent(event);
+}
 
 const videoElement = document.querySelector('.input_video');
 const debugCanvas = document.querySelector('.output_canvas');
@@ -34,7 +42,7 @@ const handParts = {
   pinky: { base: 17, middle: 18, topKnuckle: 19, tip: 20 },
 };
 
-const getElementCoords = (element) => {
+function getElementCoords(element) {
   const rect = element.getBoundingClientRect();
   const elementTop = rect.top / window.innerHeight;
   const elementBottom = rect.bottom / window.innerHeight;
@@ -43,18 +51,18 @@ const getElementCoords = (element) => {
   return { elementTop, elementBottom, elementLeft, elementRight };
 };
 
-const isElementPinched = ({ pinchX, pinchY, elementTop, elementBottom, elementLeft, elementRight }) => {
+function isElementPinched({ pinchX, pinchY, elementTop, elementBottom, elementLeft, elementRight }) {
   const isPinchInXRange = elementLeft <= pinchX && pinchX <= elementRight;
   const isPinchInYRange = elementTop <= pinchY && pinchY <= elementBottom;
   return isPinchInXRange && isPinchInYRange;
 };
 
-const getPinchedElement = ({ pinchX, pinchY, elements }) => {
-  let pinchedElement;
+function getPinchedElement({ pinchX, pinchY, elements }) {
+  let grabbedElement;
   for (const element of elements) {
     const elementCoords = getElementCoords(element);
     if (isElementPinched({ pinchX, pinchY, ...elementCoords })) {
-      pinchedElement = {
+      grabbedElement = {
         domNode: element,
         coords: {
           x: elementCoords.elementLeft,
@@ -67,44 +75,30 @@ const getPinchedElement = ({ pinchX, pinchY, elements }) => {
       };
       const isTopElement = element === state.lastGrabbedElement;
       if (isTopElement) {
-        return pinchedElement;
+        return grabbedElement;
       }
     }
   }
-  return pinchedElement;
-};
-
-const pickUp = (element) => {
-  state.lastGrabbedElement?.style.removeProperty('z-index');
-  state.lastGrabbedElement = element;
-  element.style.zIndex = 1;
-  element.classList.add('element_dragging');
-  document.dispatchEvent(pinchPickUp);
-};
-
-const drop = (element) => {
-  state.isDragging = false;
-  state.pinchedElement = undefined;
-  element.classList.remove('element_dragging');
-  document.dispatchEvent(pinchDrop);
+  return grabbedElement;
 };
 
 function log(...args) {
-  if (state.isDebugMode) {
+  if (OPTIONS.IS_DEBUG_MODE) {
     console.log(...args);
   }
 }
 
-function getCurrentHand() {
-  if (!isHandAvailable()) { return null; }
-  const mirroredHand = state.handData.multiHandedness[0].label === 'Left' ? 'right' : 'left';
+function getCurrentHand(handData) {
+  const isHandAvailable = !!handData.multiHandLandmarks?.[0];
+  if (!isHandAvailable) { return null; }
+  const mirroredHand = handData.multiHandedness[0].label === 'Left' ? 'right' : 'left';
   return mirroredHand;
 }
 
-function isPinched() {
-  if (isPrimaryHandAvailable()) {
-    const fingerTip = state.handData.multiHandLandmarks[0][handParts.indexFinger.tip];
-    const thumbTip = state.handData.multiHandLandmarks[0][handParts.thumb.tip];
+function isPinched(handData) {
+  if (isPrimaryHandAvailable(handData)) {
+    const fingerTip = handData.multiHandLandmarks[0][handParts.indexFinger.tip];
+    const thumbTip = handData.multiHandLandmarks[0][handParts.thumb.tip];
     const distance = {
       x: Math.abs(fingerTip.x - thumbTip.x),
       y: Math.abs(fingerTip.y - thumbTip.y),
@@ -125,12 +119,12 @@ function convertCoordsToDomPosition({ x, y }) {
   };
 }
 
-function updateDebugCanvas() {
+function updateDebugCanvas(handData) {
   debugCanvasCtx.save();
   debugCanvasCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
-  debugCanvasCtx.drawImage(state.handData.image, 0, 0, debugCanvas.width, debugCanvas.height);
-  if (state.handData.multiHandLandmarks) {
-    for (const landmarks of state.handData.multiHandLandmarks) {
+  debugCanvasCtx.drawImage(handData.image, 0, 0, debugCanvas.width, debugCanvas.height);
+  if (handData.multiHandLandmarks) {
+    for (const landmarks of handData.multiHandLandmarks) {
       drawConnectors(debugCanvasCtx, landmarks, HAND_CONNECTIONS, {color: '#0ff', lineWidth: 5});
       drawLandmarks(debugCanvasCtx, landmarks, {color: '#f0f', lineWidth: 2});
     }
@@ -138,68 +132,56 @@ function updateDebugCanvas() {
   debugCanvasCtx.restore();
 }
 
-function flipCoordinate(coordinate) {
-  return -coordinate + 1;
-};
-
-function getMirroredCoords(coords) {
-  if (!coords) { return; }
-  const { x, y, z } = coords;
-  return { x: flipCoordinate(x), y, z };
+function getCursorPosition(handData) {
+  const { x, y, z } = handData.multiHandLandmarks[0][handParts.indexFinger.middle];
+  const mirroredXCoord = -x + 1; /* due to camera mirroring */
+  return { x: mirroredXCoord, y, z };
 }
 
-function isHandAvailable() {
-  return state.handData.multiHandLandmarks[0];
-}
-
-function isPrimaryHand(preferredHand) {
-  return getCurrentHand() === preferredHand;
-}
-
-function isPrimaryHandAvailable() {
-  return isHandAvailable() && isPrimaryHand(state.preferredHand);
+function isPrimaryHandAvailable(handData) {
+  return getCurrentHand(handData) === OPTIONS.PREFERRED_HAND;
 }
 
 function onResults(handData) {
-  state.handData = handData;
-  if (!state.handData) { return; }
-  if (state.isDebugMode) { updateDebugCanvas(); }
+  if (!handData) { return; }
+  if (OPTIONS.IS_DEBUG_MODE) { updateDebugCanvas(handData); }
 
-  updateCursor();
-  updatePinchState();
+  updateCursor(handData);
+  updatePinchState(handData);
 }
 
-function updateCursor() {
-  if (isPrimaryHandAvailable(state.handData)) {
-    const fingerCoords = getMirroredCoords(state.handData.multiHandLandmarks[0][handParts.indexFinger.middle]);
-    if (!fingerCoords) { return; }
-    Object.assign(state.cursorPosition, fingerCoords);
-    const { x, y } = convertCoordsToDomPosition(state.cursorPosition);
+function updateCursor(handData) {
+  if (isPrimaryHandAvailable(handData)) {
+    const cursorPosition = getCursorPosition(handData);
+    if (!cursorPosition) { return; }
+    const { x, y } = convertCoordsToDomPosition(cursorPosition);
     cursor.style.transform = `translate(${x}, ${y})`;
   }
 }
 
-function updatePinchState() {
+function updatePinchState(handData) {
   const wasPinchedBefore = state.isPinched;
-  const isPinchedNow = isPinched();
+  const isPinchedNow = isPinched(handData);
   const hasPassedPinchThreshold = isPinchedNow !== wasPinchedBefore;
   const hasWaitStarted = !!state.pinchChangeTimeout;
 
   if (hasPassedPinchThreshold && !hasWaitStarted) {
-    registerChangeAfterWait(isPinchedNow);
+    registerChangeAfterWait(handData, isPinchedNow);
   }
 
   if (!hasPassedPinchThreshold) {
     cancelWaitForChange();
-    if (isPinchedNow) { document.dispatchEvent(pinchMove); }
+    if (isPinchedNow) {
+      triggerEvent(PINCH_EVENTS.MOVE, { handData });
+    }
   }
 }
 
-function registerChangeAfterWait(isPinchedNow) {
+function registerChangeAfterWait(handData, isPinchedNow) {
   state.pinchChangeTimeout = setTimeout(() => {
     state.isPinched = isPinchedNow;
-    document.dispatchEvent(isPinchedNow ? pinchStart : pinchStop);
-  }, state.pinchDelayMs);
+    triggerEvent(isPinchedNow ? PINCH_EVENTS.START : PINCH_EVENTS.STOP, { handData });
+  }, OPTIONS.PINCH_DELAY_MS);
 }
 
 function cancelWaitForChange() {
@@ -207,44 +189,68 @@ function cancelWaitForChange() {
   state.pinchChangeTimeout = null;
 }
 
-document.addEventListener('pinch_start', onPinchStart);
-document.addEventListener('pinch_move', onPinchMove);
-document.addEventListener('pinch_stop', onPinchStop);
+document.addEventListener(PINCH_EVENTS.START, onPinchStart);
+document.addEventListener(PINCH_EVENTS.MOVE, onPinchMove);
+document.addEventListener(PINCH_EVENTS.STOP, onPinchStop);
+document.addEventListener(PINCH_EVENTS.PICK_UP, onPickUp);
+document.addEventListener(PINCH_EVENTS.DROP, onDrop);
 
-function onPinchStart() {
-  document.body.classList.add('is-pinched');
+function onPinchStart(eventData) {
+  const { handData } = eventData.detail;
+  const cursorPosition = getCursorPosition(handData);
 
-  const pinchStartPoint = getMirroredCoords(state.handData.multiHandLandmarks[0][handParts.indexFinger.middle]);
-  state.pinchedElement = getPinchedElement({
-    pinchX: pinchStartPoint.x,
-    pinchY: pinchStartPoint.y,
+  state.grabbedElement = getPinchedElement({
+    pinchX: cursorPosition.x,
+    pinchY: cursorPosition.y,
     elements: movableElements,
   });
-  if (state.pinchedElement) {
-    pickUp(state.pinchedElement.domNode);
+  if (state.grabbedElement) {
+    triggerEvent(PINCH_EVENTS.PICK_UP, {
+      element: state.grabbedElement.domNode
+    });
   }
+
+  document.body.classList.add('is-pinched');
 }
 
-function onPinchMove() {
-  const pinchCurrentPoint = getMirroredCoords(state.handData.multiHandLandmarks[0][handParts.indexFinger.middle]);
+function onPinchMove(eventData) {
+  const { handData } = eventData.detail;
+  const cursorPosition = getCursorPosition(handData);
 
-  if (state.pinchedElement) {
-    state.pinchedElement.coords = {
-      x: pinchCurrentPoint.x - state.pinchedElement.offsetFromCorner.x,
-      y: pinchCurrentPoint.y - state.pinchedElement.offsetFromCorner.y,
+  if (state.grabbedElement) {
+    state.grabbedElement.coords = {
+      x: cursorPosition.x - state.grabbedElement.offsetFromCorner.x,
+      y: cursorPosition.y - state.grabbedElement.offsetFromCorner.y,
     };
 
-    const { x, y } = convertCoordsToDomPosition(state.pinchedElement.coords);
-    state.pinchedElement.domNode.style.transform = `translate(${x}, ${y})`;
+    const { x, y } = convertCoordsToDomPosition(state.grabbedElement.coords);
+    state.grabbedElement.domNode.style.transform = `translate(${x}, ${y})`;
   }
 }
 
 function onPinchStop() {
   document.body.classList.remove('is-pinched');
-  if (state.pinchedElement) {
-    drop(state.pinchedElement.domNode);
+  if (state.grabbedElement) {
+    triggerEvent(PINCH_EVENTS.DROP, {
+      element: state.grabbedElement.domNode
+    });
   }
 }
+
+function onPickUp(eventData) {
+  const { element } = eventData.detail;
+  state.lastGrabbedElement?.style.removeProperty('z-index');
+  state.lastGrabbedElement = element;
+  element.style.zIndex = 1;
+  element.classList.add('element_dragging');
+};
+
+function onDrop(eventData) {
+  const { element } = eventData.detail;
+  state.isDragging = false;
+  state.grabbedElement = undefined;
+  element.classList.remove('element_dragging');
+};
 
 const hands = new Hands({locateFile: (file) => {
   return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -276,6 +282,6 @@ function startDebug() {
     </style>
   `;
 }
-if (state.isDebugMode) {
+if (OPTIONS.IS_DEBUG_MODE) {
   startDebug();
 }
