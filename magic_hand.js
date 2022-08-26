@@ -19,8 +19,8 @@ const PINCH_EVENTS = {
   DROP: 'pinch_drop',
 };
 
-function triggerEvent(eventName, detail) {
-  const event = new CustomEvent(eventName, { detail });
+function triggerEvent({ eventName, eventData }) {
+  const event = new CustomEvent(eventName, { detail: eventData });
   document.dispatchEvent(event);
 }
 
@@ -172,7 +172,10 @@ function updatePinchState(handData) {
   if (!hasPassedPinchThreshold) {
     cancelWaitForChange();
     if (isPinchedNow) {
-      triggerEvent(PINCH_EVENTS.MOVE, { handData });
+      triggerEvent({
+        eventName: PINCH_EVENTS.MOVE,
+        eventData: handData,
+      });
     }
   }
 }
@@ -180,7 +183,10 @@ function updatePinchState(handData) {
 function registerChangeAfterWait(handData, isPinchedNow) {
   state.pinchChangeTimeout = setTimeout(() => {
     state.isPinched = isPinchedNow;
-    triggerEvent(isPinchedNow ? PINCH_EVENTS.START : PINCH_EVENTS.STOP, { handData });
+    triggerEvent({
+      eventName: isPinchedNow ? PINCH_EVENTS.START : PINCH_EVENTS.STOP,
+      eventData: handData,
+    });
   }, OPTIONS.PINCH_DELAY_MS);
 }
 
@@ -195,8 +201,8 @@ document.addEventListener(PINCH_EVENTS.STOP, onPinchStop);
 document.addEventListener(PINCH_EVENTS.PICK_UP, onPickUp);
 document.addEventListener(PINCH_EVENTS.DROP, onDrop);
 
-function onPinchStart(eventData) {
-  const { handData } = eventData.detail;
+function onPinchStart(eventInfo) {
+  const handData = eventInfo.detail;
   const cursorPosition = getCursorPosition(handData);
 
   state.grabbedElement = getPinchedElement({
@@ -205,16 +211,17 @@ function onPinchStart(eventData) {
     elements: movableElements,
   });
   if (state.grabbedElement) {
-    triggerEvent(PINCH_EVENTS.PICK_UP, {
-      element: state.grabbedElement.domNode
+    triggerEvent({
+      eventName: PINCH_EVENTS.PICK_UP,
+      eventData: state.grabbedElement.domNode,
     });
   }
 
   document.body.classList.add('is-pinched');
 }
 
-function onPinchMove(eventData) {
-  const { handData } = eventData.detail;
+function onPinchMove(eventInfo) {
+  const handData = eventInfo.detail;
   const cursorPosition = getCursorPosition(handData);
 
   if (state.grabbedElement) {
@@ -231,22 +238,23 @@ function onPinchMove(eventData) {
 function onPinchStop() {
   document.body.classList.remove('is-pinched');
   if (state.grabbedElement) {
-    triggerEvent(PINCH_EVENTS.DROP, {
-      element: state.grabbedElement.domNode
+    triggerEvent({
+      eventName: PINCH_EVENTS.DROP,
+      eventData: state.grabbedElement.domNode,
     });
   }
 }
 
-function onPickUp(eventData) {
-  const { element } = eventData.detail;
+function onPickUp(eventInfo) {
+  const element = eventInfo.detail;
   state.lastGrabbedElement?.style.removeProperty('z-index');
   state.lastGrabbedElement = element;
   element.style.zIndex = 1;
   element.classList.add('element_dragging');
 };
 
-function onDrop(eventData) {
-  const { element } = eventData.detail;
+function onDrop(eventInfo) {
+  const element = eventInfo.detail;
   state.isDragging = false;
   state.grabbedElement = undefined;
   element.classList.remove('element_dragging');
