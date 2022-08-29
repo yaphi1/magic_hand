@@ -132,7 +132,7 @@ function updateDebugCanvas(handData) {
   debugCanvasCtx.restore();
 }
 
-function getCursorPosition(handData) {
+function getCursorCoords(handData) {
   const { x, y, z } = handData.multiHandLandmarks[0][handParts.indexFinger.middle];
   const mirroredXCoord = -x + 1; /* due to camera mirroring */
   return { x: mirroredXCoord, y, z };
@@ -152,9 +152,9 @@ function onResults(handData) {
 
 function updateCursor(handData) {
   if (isPrimaryHandAvailable(handData)) {
-    const cursorPosition = getCursorPosition(handData);
-    if (!cursorPosition) { return; }
-    const { x, y } = convertCoordsToDomPosition(cursorPosition);
+    const cursorCoords = getCursorCoords(handData);
+    if (!cursorCoords) { return; }
+    const { x, y } = convertCoordsToDomPosition(cursorCoords);
     cursor.style.transform = `translate(${x}, ${y})`;
   }
 }
@@ -203,11 +203,11 @@ document.addEventListener(PINCH_EVENTS.DROP, onDrop);
 
 function onPinchStart(eventInfo) {
   const handData = eventInfo.detail;
-  const cursorPosition = getCursorPosition(handData);
+  const cursorCoords = getCursorCoords(handData);
 
   state.grabbedElement = getPinchedElement({
-    pinchX: cursorPosition.x,
-    pinchY: cursorPosition.y,
+    pinchX: cursorCoords.x,
+    pinchY: cursorCoords.y,
     elements: movableElements,
   });
   if (state.grabbedElement) {
@@ -222,12 +222,12 @@ function onPinchStart(eventInfo) {
 
 function onPinchMove(eventInfo) {
   const handData = eventInfo.detail;
-  const cursorPosition = getCursorPosition(handData);
+  const cursorCoords = getCursorCoords(handData);
 
   if (state.grabbedElement) {
     state.grabbedElement.coords = {
-      x: cursorPosition.x - state.grabbedElement.offsetFromCorner.x,
-      y: cursorPosition.y - state.grabbedElement.offsetFromCorner.y,
+      x: cursorCoords.x - state.grabbedElement.offsetFromCorner.x,
+      y: cursorCoords.y - state.grabbedElement.offsetFromCorner.y,
     };
 
     const { x, y } = convertCoordsToDomPosition(state.grabbedElement.coords);
