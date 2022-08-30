@@ -174,7 +174,7 @@ function updatePinchState(handData) {
     if (isPinchedNow) {
       triggerEvent({
         eventName: PINCH_EVENTS.MOVE,
-        eventData: handData,
+        eventData: getCursorCoords(handData),
       });
     }
   }
@@ -185,7 +185,7 @@ function registerChangeAfterWait(handData, isPinchedNow) {
     state.isPinched = isPinchedNow;
     triggerEvent({
       eventName: isPinchedNow ? PINCH_EVENTS.START : PINCH_EVENTS.STOP,
-      eventData: handData,
+      eventData: getCursorCoords(handData),
     });
   }, OPTIONS.PINCH_DELAY_MS);
 }
@@ -202,8 +202,7 @@ document.addEventListener(PINCH_EVENTS.PICK_UP, onPickUp);
 document.addEventListener(PINCH_EVENTS.DROP, onDrop);
 
 function onPinchStart(eventInfo) {
-  const handData = eventInfo.detail;
-  const cursorCoords = getCursorCoords(handData);
+  const cursorCoords = eventInfo.detail;
 
   state.grabbedElement = getPinchedElement({
     pinchX: cursorCoords.x,
@@ -221,8 +220,7 @@ function onPinchStart(eventInfo) {
 }
 
 function onPinchMove(eventInfo) {
-  const handData = eventInfo.detail;
-  const cursorCoords = getCursorCoords(handData);
+  const cursorCoords = eventInfo.detail;
 
   if (state.grabbedElement) {
     state.grabbedElement.coords = {
